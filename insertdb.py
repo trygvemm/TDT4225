@@ -75,6 +75,8 @@ class InsertDB:
         print(tabulate(rows, headers=self.cursor.column_names))
     
 
+import os
+
 def read_plt_files_to_dict(data_directory):
     data_dict = {}
     for root, dirs, files in os.walk(data_directory):
@@ -86,13 +88,17 @@ def read_plt_files_to_dict(data_directory):
                 with open(file_path, "r") as f:
                     lines = f.readlines()[6:]  # Skip the first 6 header lines
                     
+                    # Skip the file if it has more than 2500 trackpoints
+                    if len(lines) > 2500:
+                        continue
+                    
                     trackpoints = []
                     for line in lines:
                         lat, lon, _, altitude, date_days, date, time = line.strip().split(',')
                         trackpoints.append({
                             "lat": float(lat),
                             "lon": float(lon),
-                            "altitude": int(altitude),
+                            "altitude": float(altitude),
                             "date_days": float(date_days),
                             "date_time": f"{date} {time}"
                         })
@@ -100,3 +106,8 @@ def read_plt_files_to_dict(data_directory):
                     # Store the trackpoints in the dictionary, key is user_id + activity_id
                     data_dict[f"{user_id}_{file}"] = trackpoints
     return data_dict
+
+
+#test data_dict
+data_dict = read_plt_files_to_dict("dataset/Data")
+print(data_dict)
