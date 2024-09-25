@@ -8,6 +8,19 @@ class InsertDB:
         self.db_connection = self.connection.db_connection
         self.cursor = self.connection.cursor
     
+    def truncate_tables(self):
+        try:
+            # Truncate tables in reverse order due to foreign key constraints
+            self.cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")  # Temporarily disable foreign key checks
+            self.cursor.execute("TRUNCATE TABLE TrackPoint;")
+            self.cursor.execute("TRUNCATE TABLE Activity;")
+            self.cursor.execute("TRUNCATE TABLE User;")
+            self.cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")  # Re-enable foreign key checks
+            self.db_connection.commit()
+            print("All tables truncated successfully.")
+        except Exception as e:
+            print(f"Error truncating tables: {e}")
+    
     # Creates the tables in the database
     def create_tables(self):
         query = """CREATE TABLE IF NOT EXISTS User (
@@ -71,13 +84,26 @@ class InsertDB:
         self.cursor.execute(query, (activity_id, lat, lon, altitude, date_days, date_time))
         self.db_connection.commit()
 
+    def insert_trackpoints_batch(self, trackpoints):
+        query = """
+            INSERT INTO TrackPoint (activity_id, lat, lon, altitude, date_days, date_time) 
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        self.cursor.executemany(query, trackpoints)
+        self.db_connection.commit()
+
     def fetch_data(self, table_name):
         query = "SELECT * FROM %s" % table_name
         self.cursor.execute(query)
         rows = self.cursor.fetchall()
         return rows
 
+import time
+
 def read_plt_files_and_insert(data_directory, db_handler):
+    batch_size = 1000  # Set a batch size for batch insertion
+    trackpoint_batch = []  # List to hold trackpoints for batch insert
+    
     for root, dirs, files in os.walk(data_directory):
         for file in files:
             if file.endswith(".plt"):
@@ -108,12 +134,17 @@ def read_plt_files_and_insert(data_directory, db_handler):
                         # Convert altitude from feet to meters
                         altitude_meters = int(float(altitude_feet) * 0.3048)
 
-                        db_handler.insert_trackpoint(activity_id, 
-                                                     float(lat), 
-                                                     float(lon), 
-                                                     altitude_meters, 
-                                                     float(date_days), 
-                                                     f"{date} {time}")
+                        # Add trackpoint data to the batch
+                        trackpoint_batch.append((activity_id, float(lat), float(lon), altitude_meters, float(date_days), f"{date} {time}"))
+
+                        # Once the batch size is reached, insert the batch
+                        if len(trackpoint_batch) >= batch_size:
+                            db_handler.insert_trackpoints_batch(trackpoint_batch)
+                            trackpoint_batch.clear()  # Clear the batch after insertion
+
+    # Insert any remaining trackpoints in the last batch
+    if trackpoint_batch:
+        db_handler.insert_trackpoints_batch(trackpoint_batch)
 
 # Usage
 db_handler = InsertDB()
