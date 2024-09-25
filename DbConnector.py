@@ -15,9 +15,9 @@ class DbConnector:
     """
 
     def __init__(self,
-                 HOST="tdt4225-xx.idi.ntnu.no",
-                 DATABASE="DATABASE_NAME",
-                 USER="TEST_USER",
+                 HOST="tdt4225-18.idi.ntnu.no",
+                 DATABASE="tdt4225_db",
+                 USER="testuser",
                  PASSWORD="test123"):
         # Connect to the database
         try:
