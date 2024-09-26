@@ -120,8 +120,8 @@ def read_plt_files_and_insert(data_directory, db_handler, numbers_list):
                     if len(lines) > 2500:
                         continue
 
-                    # Insert user if not already inserted
-                    db_handler.insert_user(user_id, has_labels=False)
+                    # TODO: not insert user every activity
+                    db_handler.insert_user(user_id, has_labels=int(user_id) in numbers_list)
 
                     # Set start and end times for the activity
                     start_time_raw = lines[0].strip().split(',')[-2] + ' ' + lines[0].strip().split(',')[-1]
