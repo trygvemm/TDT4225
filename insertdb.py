@@ -100,13 +100,28 @@ from datetime import datetime
 from datetime import datetime
 import os
 
-def read_plt_files_and_insert(data_directory, db_handler, numbers_list):
-    batch_size = 5000  # Set a batch size for batch insertion
+def read_plt_files_and_insert(data_directory, db_handler, labeled_ids):
+    batch_size = 5000  # Batch size for batch insertion of trackpoints
     trackpoint_batch = []  # List to hold trackpoints for batch insert
+    users_to_insert = set()  # Set to hold unique users to insert
 
     def format_time(time_str, from_format, to_format):
         return datetime.strptime(time_str, from_format).strftime(to_format)
 
+    # First pass: Collect all user IDs from labeled_ids and activity files
+    for root, dirs, files in os.walk(data_directory):
+        for file in files:
+            if file.endswith(".plt"):
+                user_id = os.path.basename(os.path.dirname(root))  # Get the user directory (001, 002, etc.)
+                # Collect user for the activity
+                users_to_insert.add((user_id, user_id in labeled_ids))  # Add user and whether they have labels
+
+    # Insert unique users into the database before processing activities
+    for user_id, has_labels in users_to_insert:
+        print(f"Inserting user: {user_id} with has_labels={has_labels}")
+        db_handler.insert_user(user_id, has_labels)
+
+    # Second pass: Process files and insert activities and trackpoints
     for root, dirs, files in os.walk(data_directory):
         for file in files:
             if file.endswith(".plt"):
@@ -120,9 +135,6 @@ def read_plt_files_and_insert(data_directory, db_handler, numbers_list):
                     if len(lines) > 2500:
                         continue
 
-                    # TODO: not insert user every activity
-                    db_handler.insert_user(user_id, has_labels=int(user_id) in numbers_list)
-
                     # Set start and end times for the activity
                     start_time_raw = lines[0].strip().split(',')[-2] + ' ' + lines[0].strip().split(',')[-1]
                     end_time_raw = lines[-1].strip().split(',')[-2] + ' ' + lines[-1].strip().split(',')[-1]
@@ -133,10 +145,8 @@ def read_plt_files_and_insert(data_directory, db_handler, numbers_list):
 
                     transportation_mode = None
 
-                    # Check if user_id is in numbers_list
-                    if int(user_id) in numbers_list:
-                        # Load label data if user_id matches
-                   
+                    # Load label data if user_id matches
+                    if user_id in labeled_ids:
                         label_data = []
                         with open(f"dataset/Data/{user_id}/labels.txt", "r") as label_file:
                             for line in label_file.readlines()[1:]:  # Skip header
@@ -145,13 +155,13 @@ def read_plt_files_and_insert(data_directory, db_handler, numbers_list):
 
                         # Check for matching start and end times in label_data
                         for label_start, label_end, mode in label_data:
-                    
                             if label_start == start_time and label_end == end_time:
-                                print("Match found!")
+                                print("Match found for transportation mode!")
                                 transportation_mode = mode
                                 break
 
                     # Insert activity and get the activity ID
+                    # print(f"Attempting to insert activity for user_id: {user_id}")
                     activity_id = db_handler.insert_activity(user_id, transportation_mode, start_time_raw, end_time_raw)
 
                     # Insert each trackpoint for the current activity
@@ -173,23 +183,19 @@ def read_plt_files_and_insert(data_directory, db_handler, numbers_list):
     if trackpoint_batch:
         db_handler.insert_trackpoints_batch(trackpoint_batch)
 
+
+
+# Reads labeled_ids.txt
 def read_numbers_from_file(file_path):
-    numbers = []  # Initialize an empty list to store numbers
+    numbers = []
     with open(file_path, "r") as file:
         for line in file:
-            # Split the line into words
             for word in line.split():
-                try:
-                    # Try converting the word to a float (or int)
-                    number = int(word)  # Use int(word) if you only want integers
-                    numbers.append(number)  # Add the number to the list
-                except ValueError:
-                    # If conversion fails, skip the word
-                    continue
+                numbers.append(word)
     return numbers
 
 # Example usage
-file_path = "dataset/labeled_ids.txt"  # Replace with your file path
+file_path = "dataset\\labeled_ids.txt"
 numbers_list = read_numbers_from_file(file_path)
 
 
@@ -198,4 +204,4 @@ numbers_list = read_numbers_from_file(file_path)
 db_handler = InsertDB()
 db_handler.create_tables()
 db_handler.truncate_tables()
-read_plt_files_and_insert("dataset/Data", db_handler, numbers_list)
+read_plt_files_and_insert("dataset\\Data", db_handler, numbers_list)
