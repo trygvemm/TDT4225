@@ -171,8 +171,9 @@ def read_plt_files_and_insert(data_directory, db_handler, labeled_ids):
                         # Convert altitude from feet to meters
                         altitude_int = int(float(altitude_feet))
 
-                        # Add trackpoint data to the batch
-                        trackpoint_batch.append((activity_id, float(lat), float(lon), altitude_int, f"{date} {time}"))
+                        # Add trackpoint data to the batch if altitude is valid
+                        if altitude_int != -777:
+                            trackpoint_batch.append((activity_id, float(lat), float(lon), altitude_int, f"{date} {time}"))
 
                         # Once the batch size is reached, insert the batch
                         if len(trackpoint_batch) >= batch_size:
