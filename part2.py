@@ -1,4 +1,6 @@
-# Part 2 of the assignment
+#Part 2. Querying the database
+#We utilized both Copilot and ChatGPT throughout this section, primarily for formatting, enhancing efficiency, and providing inspiration.
+
 from DbConnector import DbConnector
 from tabulate import tabulate
 from haversine import haversine, Unit

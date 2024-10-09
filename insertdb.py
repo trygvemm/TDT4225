@@ -1,3 +1,6 @@
+#Part 1. Inserting data into the database
+#We utilized both Copilot and ChatGPT throughout this section, primarily for formatting, enhancing efficiency, and providing inspiration.
+
 from DbConnector import DbConnector
 import os
 
@@ -11,11 +14,11 @@ class InsertDB:
     def truncate_tables(self):
         try:
             # Truncate tables in reverse order due to foreign key constraints
-            self.cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")  # Temporarily disable foreign key checks
+            self.cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")  
             self.cursor.execute("TRUNCATE TABLE TrackPoint;")
             self.cursor.execute("TRUNCATE TABLE Activity;")
             self.cursor.execute("TRUNCATE TABLE User;")
-            self.cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")  # Re-enable foreign key checks
+            self.cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")  
             self.db_connection.commit()
             print("All tables truncated successfully.")
         except Exception as e:
