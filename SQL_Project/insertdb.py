@@ -3,6 +3,7 @@
 
 from DbConnector import DbConnector
 import os
+from datetime import datetime
 
 class InsertDB:
     # Connects to the database
@@ -90,11 +91,6 @@ class InsertDB:
         self.cursor.execute(query)
         rows = self.cursor.fetchall()
         return rows
-import os
-from datetime import datetime
-
-from datetime import datetime
-import os
 
 def read_plt_files_and_insert(data_directory, db_handler, labeled_ids):
     batch_size = 5000  # Batch size for batch insertion of trackpoints
@@ -192,10 +188,10 @@ def read_numbers_from_file(file_path):
     return numbers
 
 # Usage
-file_path = "dataset\\labeled_ids.txt"
+file_path = "SQL_Project\\dataset\\labeled_ids.txt"
 numbers_list = read_numbers_from_file(file_path)
 
 db_handler = InsertDB()
 db_handler.create_tables()
 db_handler.truncate_tables()
-read_plt_files_and_insert("dataset\\Data", db_handler, numbers_list)
+read_plt_files_and_insert("SQL_Project\\dataset\\Data", db_handler, numbers_list)

@@ -3,7 +3,6 @@
 
 from DbConnector import DbConnector
 from tabulate import tabulate
-from haversine import haversine, Unit
 
 connection = DbConnector()
 db_connection = connection.db_connection

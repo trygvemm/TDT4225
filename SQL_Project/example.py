@@ -1,7 +1,6 @@
 from DbConnector import DbConnector
 from tabulate import tabulate
 
-
 class ExampleProgram:
 
     def __init__(self):
