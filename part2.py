@@ -289,21 +289,13 @@ def users_most_used_transportation_mode():
     cursor.execute("""
         SELECT user_id, transportation_mode
         FROM (
-            SELECT user_id, transportation_mode, COUNT(*) AS mode_count
+            SELECT user_id, transportation_mode, COUNT(*) AS mode_count,
+                   ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY COUNT(*) DESC) AS rn
             FROM Activity
             WHERE transportation_mode IS NOT NULL
             GROUP BY user_id, transportation_mode
         ) AS mode_counts
-        WHERE mode_count = (
-            SELECT MAX(mode_count)
-            FROM (
-                SELECT user_id, transportation_mode, COUNT(*) AS mode_count
-                FROM Activity
-                WHERE transportation_mode IS NOT NULL
-                GROUP BY user_id, transportation_mode
-            ) AS inner_counts
-            WHERE inner_counts.user_id = mode_counts.user_id
-        )
+        WHERE rn = 1  -- Only select the most used transportation mode for each user
         ORDER BY user_id
     """)
     users = cursor.fetchall()
