@@ -54,8 +54,9 @@ def users_taken_taxi():
     return users
 
 users_taxi = users_taken_taxi()
-users_taxi = [user[0] for user in users_taxi]           #Formatting
-print("Users who have taken a taxi: ", users_taxi)
+users_taxi = [user[0] for user in users_taxi]  # Formatting
+print("Users who have taken a taxi:")
+print(tabulate([[user] for user in users_taxi], headers=["User ID"]))
 
 #5 Find all types of transportation modes and count how many activities that are tagged with these transportation mode labels. Do not count the rows where the mode is null.
 
@@ -87,8 +88,9 @@ def year_most_hours():
 
 year_activities = year_most_activities()
 year_hours = year_most_hours()
-print("Year with most activities: ", year_activities)
-print("Year with most hours: ", year_hours)
+
+print(f"Year with most activities: {year_activities[0]}, Number of activities: {year_activities[1]}")
+print(f"Year with most hours: {year_hours[0]}, Number of hours: {year_hours[1]}")
 
 #7. Find the total distance (in km) walked in 2008, by user with id=112.
 
@@ -178,41 +180,6 @@ print("Total distance walked in 2008 by user 112:", round(distance_walked, 2), "
 #Remember that some altitude-values are invalid
 
 
-#TODO: tror dette funker men må gjennom sykt mange trackpoints og tar veldig lang tid å gjøre dette i sql
-def top_20_users_altitude_SQLONLY(): 
-    cursor.execute("""
-       WITH altitude_changes AS (
-            SELECT 
-                Activity.user_id,
-                tp.altitude,
-                LEAD(tp.altitude) OVER (PARTITION BY tp.activity_id ORDER BY tp.date_time) AS next_altitude
-            FROM TrackPoint tp
-            JOIN Activity ON tp.activity_id = Activity.id
-            WHERE tp.altitude IS NOT NULL
-        ),
-        gains AS (
-            SELECT 
-                user_id,
-                SUM(CASE 
-                        WHEN next_altitude > altitude THEN next_altitude - altitude 
-                        ELSE 0 
-                    END) AS altitude_gain
-            FROM altitude_changes
-            GROUP BY user_id
-        )
-        SELECT user_id, altitude_gain
-        FROM gains
-        ORDER BY altitude_gain DESC
-        LIMIT 20;
-    """)
-    users = cursor.fetchall()
-    return users
-
-top_users = top_20_users_altitude_SQLONLY()
-print("Top 20 users by altitude gained:")
-for user_id, total_gain in top_users:
-    print(f"User ID: {user_id}, Total Meters Gained: {total_gain}")
-
 
 # def get_trackpoints(user_id):
 #     cursor.execute("""
@@ -265,3 +232,61 @@ for user_id, total_gain in top_users:
 
 # users_invalid = users_invalid_activities()
 # print("Users with invalid activities: ", users_invalid)
+
+
+
+#10. Find the users who have tracked an activity in the Forbidden City of Beijing.
+# In this question you can consider the Forbidden City to have coordinates that correspond to: lat 39.916, lon 116.397.
+
+def users_forbidden_city():
+    cursor.execute("""
+        SELECT DISTINCT User.id
+        FROM User
+        JOIN Activity ON User.id = Activity.user_id
+        JOIN TrackPoint ON Activity.id = TrackPoint.activity_id
+        WHERE TrackPoint.lat LIKE '39.916%' 
+          AND TrackPoint.lon LIKE '116.397%'
+    """)
+    users = cursor.fetchall()
+    return users
+
+users_forbidden = users_forbidden_city()
+users_forbidden = [user[0] for user in users_forbidden]  # Formatting
+print("Users who have tracked an activity in the Forbidden City of Beijing:")
+print(tabulate([[user] for user in users_forbidden], headers=["User ID"]))
+
+#11.Find all users who have registered transportation_mode and their most used transportation_mode.
+# ○ The answer should be on format (user_id, most_used_transportation_mode) sorted on user_id.
+# ○ Some users may have the same number of activities tagged with e.g. walk and car. In this case it is up to you to decide which transportation mode to include in your answer (choose one).
+# ○ Do not count the rows where the mode is null
+
+def users_most_used_transportation_mode():
+    cursor.execute("""
+        SELECT user_id, transportation_mode
+        FROM (
+            SELECT user_id, transportation_mode, COUNT(*) AS mode_count
+            FROM Activity
+            WHERE transportation_mode IS NOT NULL
+            GROUP BY user_id, transportation_mode
+        ) AS mode_counts
+        WHERE mode_count = (
+            SELECT MAX(mode_count)
+            FROM (
+                SELECT user_id, transportation_mode, COUNT(*) AS mode_count
+                FROM Activity
+                WHERE transportation_mode IS NOT NULL
+                GROUP BY user_id, transportation_mode
+            ) AS inner_counts
+            WHERE inner_counts.user_id = mode_counts.user_id
+        )
+        ORDER BY user_id
+    """)
+    users = cursor.fetchall()
+    return users
+
+
+
+
+users_most_used = users_most_used_transportation_mode()
+print("Users and their most used transportation mode:")
+print(tabulate(users_most_used, headers=["User ID", "Most Used Transportation Mode"]))
