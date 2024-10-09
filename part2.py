@@ -10,12 +10,14 @@ cursor = connection.cursor
 
 #1. How many users, activities and trackpoints are there in the dataset (after it is inserted into the database)
 def count_users_activities_trackpoints():
-    cursor.execute("SELECT COUNT(*) FROM User")
-    users = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM Activity")
-    activities = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM TrackPoint")
-    trackpoints = cursor.fetchone()[0]
+    cursor.execute("""
+        SELECT 
+            (SELECT COUNT(*) FROM User) AS user_count,
+            (SELECT COUNT(*) FROM Activity) AS activity_count,
+            (SELECT COUNT(*) FROM TrackPoint) AS trackpoint_count;
+    """)
+    result = cursor.fetchone()
+    users, activities, trackpoints = result
     return users, activities, trackpoints
 
 
@@ -94,31 +96,7 @@ print(f"Year with most hours: {year_hours[0]}, Number of hours: {year_hours[1]}"
 
 #7. Find the total distance (in km) walked in 2008, by user with id=112.
 
-# Option 1: Fetche alt av data, gjøre beregninger i python
-'''
-def total_distance_walked():
-    cursor.execute("""
-        SELECT TrackPoint.lat, TrackPoint.lon, TrackPoint.date_time
-        FROM TrackPoint
-        JOIN Activity ON Activity.id = TrackPoint.activity_id
-        WHERE Activity.user_id = 112 AND YEAR(TrackPoint.date_time) = 2008 AND transportation_mode = "walk"
-    """)
-    trackpoints = cursor.fetchall()
-    distance = 0
-    for i in range(1, len(trackpoints)):
-        point1 = (trackpoints[i-1][0], trackpoints[i-1][1])
-        point2 = (trackpoints[i][0], trackpoints[i][1])
-        distance += haversine(point1, point2, unit=Unit.KILOMETERS)
-    return distance
-
-
-distance_walked = total_distance_walked()
-print("Total distance walked in 2008 by user 112: ", distance_walked)
-
-'''
-
 # Option 2: Fetche data basert på tidsstempler, ikke id. Gjøre alt av beregninger i SQL.
-# Resultat: 1551946.16
 
 def total_distance_walked():
     # SQL query to calculate the total distance walked using the Haversine formula
@@ -180,42 +158,89 @@ print("Total distance walked in 2008 by user 112:", round(distance_walked, 2), "
 #Remember that some altitude-values are invalid
 
 
-
-# def get_trackpoints(user_id):
+#TODO: tror dette funker men må gjennom sykt mange trackpoints og tar veldig lang tid å gjøre dette i sql
+# def top_20_users_altitude_SQLONLY(): 
 #     cursor.execute("""
-#         SELECT Activity.id, TrackPoint.altitude
-#         FROM TrackPoint
-#         JOIN Activity ON Activity.id = TrackPoint.activity_id
-#         WHERE Activity.user_id = %s
-#         ORDER BY Activity.id, TrackPoint.date_time
-#     """, (user_id,))
-#     return cursor.fetchall()
+#        WITH altitude_changes AS (
+#             SELECT 
+#                 Activity.user_id,
+#                 tp.altitude,
+#                 LEAD(tp.altitude) OVER (PARTITION BY tp.activity_id ORDER BY tp.date_time) AS next_altitude
+#             FROM TrackPoint tp
+#             JOIN Activity ON tp.activity_id = Activity.id
+#             WHERE tp.altitude IS NOT NULL
+#         ),
+#         gains AS (
+#             SELECT 
+#                 user_id,
+#                 SUM(CASE 
+#                         WHEN next_altitude > altitude THEN next_altitude - altitude 
+#                         ELSE 0 
+#                     END) AS altitude_gain
+#             FROM altitude_changes
+#             GROUP BY user_id
+#         )
+#         SELECT user_id, altitude_gain
+#         FROM gains
+#         ORDER BY altitude_gain DESC
+#         LIMIT 20;
+#     """)
+#     users = cursor.fetchall()
+#     return users
 
-
-# def calculate_altitude_gain(trackpoints):
-#     altitude_gain = 0
-#     last_altitude = None
-#     last_activity_id = None
-
-#     for activity_id, altitude in trackpoints:
-#         if last_altitude is not None and last_activity_id == activity_id:
-#             # Only count positive altitude gain
-#             if altitude > last_altitude:
-#                 altitude_gain += altitude - last_altitude
-#         last_altitude = altitude
-#         last_activity_id = activity_id
+# top_users = top_20_users_altitude_SQLONLY()
+# print("Top 20 users by altitude gained:")
+# for user_id, total_gain in top_users:
+#     print(f"User ID: {user_id}, Total Meters Gained: {total_gain}")
     
-#     return altitude_gain
+def top_20_users_altitude():
+    cursor.execute("""
+        SELECT 
+            a.user_id,
+            tp.altitude,
+            tp.date_time
+        FROM 
+            Activity a
+        JOIN 
+            TrackPoint tp ON a.id = tp.activity_id
+        WHERE 
+            tp.altitude IS NOT NULL
+        ORDER BY 
+            a.user_id, tp.date_time;
+    """)
+    
+    results = cursor.fetchall()
+    
+    # Calculate altitude gains in Python
+    altitude_gains = {}
+    
+    for i in range(len(results)):
+        user_id = results[i][0]
+        current_altitude = results[i][1]
+        
+        if user_id not in altitude_gains:
+            altitude_gains[user_id] = 0
+        
+        # Check if there's a next track point for the same user
+        if i + 1 < len(results) and results[i + 1][0] == user_id:
+            next_altitude = results[i + 1][1]
+            if next_altitude > current_altitude:
+                # Convert altitude gain from feet to meters
+                altitude_gain = (next_altitude - current_altitude) * 0.3048  # Convert to meters
+                altitude_gains[user_id] += altitude_gain
+    
+    # Get top 20 users by altitude gained
+    top_users = sorted(altitude_gains.items(), key=lambda x: x[1], reverse=True)[:20]
+    
+    return top_users
 
-# # Fetch data for a specific user
-# trackpoints = get_trackpoints(user_id=112)
-
-# # Calculate the total altitude gain in Python
-# total_altitude_gain = calculate_altitude_gain(trackpoints)
-# print(f"Total altitude gain: {total_altitude_gain} meters")
+top_users = top_20_users_altitude()
+print("Top 20 users by altitude gained (in meters):")
+for user_id, total_gain in top_users:
+    print(f"User ID: {user_id}, Total Meters Gained: {total_gain:.2f}")
 
 
-# #8. Find all users who have invalid activities. An invalid activity is an activity with consecutive trackpoints where the timestamps deviate with more than 5 minutes.
+#9. Find all users who have invalid activities. An invalid activity is an activity with consecutive trackpoints where the timestamps deviate with more than 5 minutes.
 
 # #TODO
 # def users_invalid_activities():
