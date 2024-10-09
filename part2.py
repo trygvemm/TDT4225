@@ -65,7 +65,7 @@ def users_taken_taxi():
     return users
 
 users_taxi = users_taken_taxi()
-users_taxi = [user[0] for user in users_taxi]  # Formatting
+users_taxi = [user[0] for user in users_taxi]
 print("\nTask 4: Users Who Have Taken a Taxi")
 print(tabulate([[user] for user in users_taxi], headers=["User ID"], tablefmt="grid"))
 
@@ -199,7 +199,7 @@ print("\nTask 8: Top 20 Users by Altitude Gained (in meters)")
 print(tabulate([[user_id, f"{total_gain:.2f}"] for user_id, total_gain in top_users], headers=["User ID", "Total Meters Gained"], tablefmt="grid"))
 
 # 9. Find all users who have invalid activities
-def find_invalid_activities_sql():
+def find_invalid_activities():
     query = """
     WITH trackpoint_diffs AS (
         SELECT
@@ -237,14 +237,9 @@ def find_invalid_activities_sql():
     cursor.execute(query)
     results = cursor.fetchall()
 
-    # Ensure user IDs are strings with leading zeros if necessary
-    formatted_results = [(str(user_id).zfill(3), count) for user_id, count in results]
-
     print("\nTask 9: Users with Invalid Activities")
-    print(tabulate(formatted_results, headers=["User ID", "Invalid Activities"], tablefmt="grid"))
-
-# Call the function
-find_invalid_activities_sql()
+    print(tabulate(results, headers=["User ID", "Invalid Activities"], tablefmt="grid"))
+find_invalid_activities()
 
 # 10. Find the users who have tracked an activity in the Forbidden City of Beijing
 def users_forbidden_city():
@@ -260,7 +255,7 @@ def users_forbidden_city():
     return users
 
 users_forbidden = users_forbidden_city()
-users_forbidden = [user[0] for user in users_forbidden]  # Formatting
+users_forbidden = [user[0] for user in users_forbidden] 
 print("\nTask 10: Users Who Visited the Forbidden City of Beijing")
 print(tabulate([[user] for user in users_forbidden], headers=["User ID"], tablefmt="grid"))
 
