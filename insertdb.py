@@ -55,16 +55,9 @@ class InsertDB:
 
     # Inserts users into the database
     def insert_user(self, user_id, has_labels):
-        # Check if the user already exists
-        query = "SELECT COUNT(*) FROM User WHERE id = %s"
-        self.cursor.execute(query, (user_id,))
-        result = self.cursor.fetchone()
-
-        if result[0] == 0:
-            # If the user does not exist, insert them
-            query = "INSERT INTO User (id, has_labels) VALUES (%s, %s)"
-            self.cursor.execute(query, (user_id, has_labels))
-            self.db_connection.commit()
+        query = "INSERT INTO User (id, has_labels) VALUES (%s, %s)"
+        self.cursor.execute(query, (user_id, has_labels))
+        self.db_connection.commit()
       
 
 
@@ -195,13 +188,10 @@ def read_numbers_from_file(file_path):
                 numbers.append(word)
     return numbers
 
-# Example usage
+# Usage
 file_path = "dataset\\labeled_ids.txt"
 numbers_list = read_numbers_from_file(file_path)
 
-
-
-# Usage
 db_handler = InsertDB()
 db_handler.create_tables()
 db_handler.truncate_tables()
