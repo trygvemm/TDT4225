@@ -22,7 +22,7 @@ class InsertMongoDB:
             "has_labels": has_labels
         }
         self.db.User.insert_one(user)
-        print(f"Inserted user: {user_id}")
+        # print(f"Inserted user: {user_id}")
 
     # Inserts an activity and returns its ID
     def insert_activity(self, user_id, transportation_mode, start_date_time, end_date_time):
@@ -39,7 +39,7 @@ class InsertMongoDB:
     def insert_trackpoints_batch(self, trackpoints):
         if trackpoints:
             self.db.TrackPoint.insert_many(trackpoints)
-            print(f"Inserted batch of {len(trackpoints)} trackpoints.")
+            # print(f"Inserted batch of {len(trackpoints)} trackpoints.")
 
 
 def read_plt_files_and_insert(data_directory, db_handler, labeled_ids):
@@ -89,15 +89,21 @@ def read_plt_files_and_insert(data_directory, db_handler, labeled_ids):
                     # Load label data if user_id matches
                     if user_id in labeled_ids:
                         label_data = []
-                        with open(f"SQL_Project\\dataset2\\Data\\{user_id}\\labels.txt", "r") as label_file:
-                            for line in label_file.readlines()[1:]:  # Skip header
-                                label_start, label_end, mode = line.strip().split('\t')
-                                label_data.append((label_start, label_end, mode))
-                        # Check for matching start and end times in label_data
-                        for label_start, label_end, mode in label_data:
-                            if label_start == start_time_raw and label_end == end_time_raw:
-                                transportation_mode = mode
-                                break
+                        label_file_path = f"SQL_Project\\dataset\\Data\\{user_id}\\labels.txt"
+                        if os.path.exists(label_file_path):
+                            with open(label_file_path, "r") as label_file:
+                                for line in label_file.readlines()[1:]:  # Skip header
+                                    label_start, label_end, mode = line.strip().split('\t')
+                                    label_data.append((label_start, label_end, mode))
+                            # Check for matching start and end times in label_data
+                            for label_start, label_end, mode in label_data:
+                                # Convert label times to match the datetime format for comparison
+                                label_start_dt = datetime.strptime(label_start, '%Y/%m/%d %H:%M:%S')
+                                label_end_dt = datetime.strptime(label_end, '%Y/%m/%d %H:%M:%S')
+                                if label_start_dt == start_time and label_end_dt == end_time:
+                                    # print("Match found for transportation mode!")
+                                    transportation_mode = mode
+                                    break
 
                     # Insert activity and get the activity ID
                     activity_id = db_handler.insert_activity(user_id, transportation_mode, start_time, end_time)
@@ -139,10 +145,10 @@ def read_numbers_from_file(file_path):
     return numbers
 
 # Usage
-file_path = "SQL_Project\\dataset2\\labeled_ids.txt"
+file_path = "SQL_Project\\dataset\\labeled_ids.txt"
 numbers_list = read_numbers_from_file(file_path)
 db_handler = InsertMongoDB()
 db_handler.drop_collections()
-read_plt_files_and_insert("SQL_Project\\dataset2\\Data", db_handler, numbers_list)
+read_plt_files_and_insert("SQL_Project\\dataset\\Data", db_handler, numbers_list)
 
 db_handler.connection.close_connection()
