@@ -86,7 +86,8 @@ activities = activity_count()
 print("\nTask 5: Transportation Modes and Their Activity Counts")
 print(tabulate(activities, headers=["Transportation Mode", "Number of Activities"], tablefmt="grid"))
 
-# 6. a) Find the year with the most activities
+# 6. 
+# a) Find the year with the most activities recorded
 def year_most_activities():
     cursor.execute("""
         SELECT YEAR(start_date_time) as year, COUNT(*) as activities
@@ -98,7 +99,7 @@ def year_most_activities():
     year = cursor.fetchone()
     return year
 
-# b) Is this also the year with the most recorded hours?
+# b) Find the year with the most hours recorded
 def year_most_hours():
     cursor.execute("""
         SELECT YEAR(start_date_time) as year, SUM(TIMESTAMPDIFF(HOUR, start_date_time, end_date_time)) as hours 
@@ -112,11 +113,11 @@ def year_most_hours():
 
 year_activities = year_most_activities()
 year_hours = year_most_hours()
-print("\nTask 6: Year with Most Activities vs. Year with Most Recorded Hours")
-print(tabulate([
-    ["Most Activities", year_activities[0], year_activities[1], "N/A"],
-    ["Most Hours", year_hours[0], "N/A", year_hours[1]]
-], headers=["Metric", "Year", "Number of Activities", "Number of Hours"], tablefmt="grid"))
+
+print("\nTask 6: Years with most activities and hours recorded")
+print(f"a) {year_activities[0]} had the most recorded activities with {year_activities[1]} activities.")
+print(f"b) {year_hours[0]} had the most recorded hours with {year_hours[1]} hours.")
+
 
 # 7. Find the total distance (in km) walked in 2008 by user with id=112
 def total_distance_walked():
