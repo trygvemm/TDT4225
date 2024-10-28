@@ -1,7 +1,8 @@
 from DbConnector import DbConnector
 import os
 from datetime import datetime, timedelta
-from geopy.distance import geodesic  # For distance calculations between lat/lon coordinates
+from haversine import haversine  
+
 
 class InsertMongoDB:
     # Connects to the MongoDB database
@@ -14,7 +15,7 @@ class InsertMongoDB:
         self.db.TrackPoint.drop()
         self.db.Activity.drop()
         self.db.User.drop()
-        print("All collections dropped successfully.")
+        #print("All collections dropped successfully.")
 
     # Inserts users into the database
     def insert_user(self, user_id, has_labels):
@@ -23,7 +24,7 @@ class InsertMongoDB:
             "has_labels": has_labels
         }
         self.db.User.insert_one(user)
-        print(f"Inserted user: {user_id}")
+        #print(f"Inserted user: {user_id}")
 
     # Inserts an activity with additional computed fields
     def insert_activity(self, user_id, transportation_mode, start_date_time, end_date_time, total_distance, altitude_gain, is_valid):
@@ -43,7 +44,7 @@ class InsertMongoDB:
     def insert_trackpoints_batch(self, trackpoints):
         if trackpoints:
             self.db.TrackPoint.insert_many(trackpoints)
-            print(f"Inserted batch of {len(trackpoints)} trackpoints.")
+            #print(f"Inserted batch of {len(trackpoints)} trackpoints.")
 
 def read_plt_files_and_insert(data_directory, db_handler, labeled_ids):
     batch_size = 5000  # Batch size for batch insertion of trackpoints
@@ -89,7 +90,7 @@ def read_plt_files_and_insert(data_directory, db_handler, labeled_ids):
                     # Load label data if user_id matches
                     if user_id in labeled_ids:
                         label_data = []
-                        label_file_path  = f"/Users/trygvis/Documents/Programmering/TDT4225/NoSQL_Project/dataset2/Data/{user_id}/labels.txt"
+                        label_file_path  = f"/Users/trygvis/Documents/Programmering/TDT4225/NoSQL_Project/dataset/Data/{user_id}/labels.txt"
                         if os.path.exists(label_file_path):
                             with open(label_file_path, "r") as label_file:
                                 for line in label_file.readlines()[1:]:  # Skip header
@@ -101,7 +102,7 @@ def read_plt_files_and_insert(data_directory, db_handler, labeled_ids):
                                 label_start_dt = datetime.strptime(label_start, '%Y/%m/%d %H:%M:%S')
                                 label_end_dt = datetime.strptime(label_end, '%Y/%m/%d %H:%M:%S')
                                 if label_start_dt == start_time and label_end_dt == end_time:
-                                    print("Match found for transportation mode!")
+                                    #print("Match found for transportation mode!")
                                     transportation_mode = mode
                                     break
 
@@ -137,7 +138,7 @@ def read_plt_files_and_insert(data_directory, db_handler, labeled_ids):
                                 # Calculate distance and add to total_distance
                                 previous_coords = (previous_point["lat"], previous_point["lon"])
                                 current_coords = (current_point["lat"], current_point["lon"])
-                                total_distance += geodesic(previous_coords, current_coords).meters
+                                total_distance += haversine(previous_coords, current_coords, unit="m")
 
                                 # Calculate altitude gain
                                 altitude_diff = current_point["altitude"] - previous_point["altitude"]
@@ -185,10 +186,10 @@ def read_numbers_from_file(file_path):
     return numbers
 
 # Usage
-file_path = "/Users/trygvis/Documents/Programmering/TDT4225/NoSQL_Project/dataset2/labeled_ids.txt"
+file_path = "/Users/trygvis/Documents/Programmering/TDT4225/NoSQL_Project/dataset/labeled_ids.txt"
 numbers_list = read_numbers_from_file(file_path)
 db_handler = InsertMongoDB()
 db_handler.drop_collections()
-read_plt_files_and_insert("/Users/trygvis/Documents/Programmering/TDT4225/NoSQL_Project/dataset2/Data", db_handler, numbers_list)
+read_plt_files_and_insert("/Users/trygvis/Documents/Programmering/TDT4225/NoSQL_Project/dataset/Data", db_handler, numbers_list)
 
 db_handler.connection.close_connection()
