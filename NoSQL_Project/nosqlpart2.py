@@ -259,7 +259,7 @@ def users_forbidden_city():
 
     user_ids = {result["_id"] for result in results}
 
-    print("\nTask 10: Users Who Visited the Forbidden City of Beijing")
+    print("\nTask 10: Users who visited the forbidden city of Beijing")
     print(tabulate([[user_id] for user_id in user_ids], headers=["User ID"], tablefmt="grid"))
 users_forbidden_city()
 
