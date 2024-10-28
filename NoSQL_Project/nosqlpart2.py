@@ -169,9 +169,6 @@ distance_walked = total_distance_walked()
 print("\nTask 7: Total Distance Walked in 2008 by User 112")
 print(f"Total distance walked by user 112 in 2008: {round(distance_walked, 2)} kilometers")
 
-
-
-
 # 8. Find the top 20 users who have gained the most altitude meters
 def top_20_users_altitude():
     pipeline = [
@@ -249,36 +246,41 @@ def users_forbidden_city():
     matching_activities = activity_collection.find({"_id": {"$in": list(activity_ids)}})
     user_ids = {activity["user_id"] for activity in matching_activities}
 
-    # Print the results in a tabulated format
     print("\nTask 10: Users Who Visited the Forbidden City of Beijing")
     print(tabulate([[user_id] for user_id in user_ids], headers=["User ID"], tablefmt="grid"))
 
 users_forbidden_city()
 
-# 11. Find all users who have registered transportation_mode and their most used transportation_mode
+
+#Task 11: Find all users who have registered transportation_mode and their most used transportation_mode 
 def users_most_used_transportation_mode():
     pipeline = [
-        {
-            "$group": {
-                "_id": {"user_id": "$user_id", "transportation_mode": "$transportation_mode"},
-                "mode_count": {"$sum": 1}
-            }
-        },
-        {
-            "$sort": {"mode_count": -1}
-        },
-        {
-            "$group": {
-                "_id": "$_id.user_id",
-                "most_used_mode": {"$first": "$_id.transportation_mode"}
-            }
-        },
-        {
-            "$sort": {"_id": 1}
-        }
+        {"$match": {"transportation_mode": {"$ne": None}}},
+        {"$group": {
+            "_id": {"user_id": "$user_id", "transportation_mode": "$transportation_mode"},
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id.user_id": 1, "count": -1}},
+        {"$group": {
+            "_id": "$_id.user_id",
+            "most_used_transportation_mode": {"$first": "$_id.transportation_mode"},
+            "count": {"$first": "$count"}
+        }},
+        {"$project": {"user_id": "$_id", "most_used_transportation_mode": 1, "_id": 0}},
+        {"$sort": {"user_id": 1}}
     ]
-    return list(activity_collection.aggregate(pipeline))
 
-users_most_used = users_most_used_transportation_mode()
-print("\nTask 11: Users and Their Most Used Transportation Mode")
-print(tabulate([[user["_id"], user["most_used_mode"]] for user in users_most_used], headers=["User ID", "Most Used Transportation Mode"], tablefmt="grid"))
+    users = list(activity_collection.aggregate(pipeline))
+    users_list = [[user['user_id'], user['most_used_transportation_mode']] for user in users]
+
+    # Select only one transportation mode if multiple modes are equally used
+    unique_users = []
+    seen_users = set()
+    for user in users_list:
+        if user[0] not in seen_users:
+            unique_users.append(user)
+            seen_users.add(user[0])
+
+    print("\nTask 11: Users and Their Most Used Transportation Mode")
+    print(tabulate(unique_users, headers=["User ID", "Most Used Transportation Mode"], tablefmt="grid"))
+users_most_used_transportation_mode()
