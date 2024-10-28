@@ -236,15 +236,24 @@ print(tabulate([[user["_id"], user["invalid_activity_count"]] for user in invali
 
 # 10. Find the users who have tracked an activity in the Forbidden City of Beijing
 def users_forbidden_city():
-    users = trackpoint_collection.distinct("user_id", {
-        "lat": {"$gte": 39.916, "$lt": 39.917},  # Adjust to your required precision
+    # Query the TrackPoint collection to find matching trackpoints (starting with the same 3 decimals)
+    matching_trackpoints = trackpoint_collection.find({
+        "lat": {"$gte": 39.916, "$lt": 39.917},
         "lon": {"$gte": 116.397, "$lt": 116.398}
     })
-    return users
 
-users_forbidden = users_forbidden_city()
-print("\nTask 10: Users Who Visited the Forbidden City of Beijing")
-print(tabulate([[user] for user in users_forbidden], headers=["User ID"], tablefmt="grid"))
+    # Extract the activity_ids from the matching trackpoints
+    activity_ids = {trackpoint["activity_id"] for trackpoint in matching_trackpoints}
+
+    # Query the Activity collection to find users who have these activity_ids
+    matching_activities = activity_collection.find({"_id": {"$in": list(activity_ids)}})
+    user_ids = {activity["user_id"] for activity in matching_activities}
+
+    # Print the results in a tabulated format
+    print("\nTask 10: Users Who Visited the Forbidden City of Beijing")
+    print(tabulate([[user_id] for user_id in user_ids], headers=["User ID"], tablefmt="grid"))
+
+users_forbidden_city()
 
 # 11. Find all users who have registered transportation_mode and their most used transportation_mode
 def users_most_used_transportation_mode():
