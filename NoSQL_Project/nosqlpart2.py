@@ -6,10 +6,9 @@ from datetime import datetime
 # Establishing the connection to MongoDB using DbConnector
 connection = DbConnector()  # Create an instance of DbConnector
 db_connection = connection.db  # Access the database connection from the DbConnector instance
-activity_collection = db_connection['Activity']  # Replace with your collection name
-user_collection = db_connection['User']  # Replace with your collection name
-trackpoint_collection = db_connection['TrackPoint']  # Replace with your collection name
-
+activity_collection = db_connection['Activity']
+user_collection = db_connection['User']
+trackpoint_collection = db_connection['TrackPoint']
 
 # 1. Count the number of users, activities, and trackpoints in the dataset
 def count_users_activities_trackpoints():
