@@ -143,7 +143,7 @@ def total_distance_walked():
     start_date = datetime(2008, 1, 1)
     end_date = datetime(2009, 1, 1)
 
-    # Sum up total distances for walking activities in 2008 for user 112
+    # Sum up total distances for walking activities in 2008 for user 112 and convert feet to kilometers
     pipeline = [
         {
             "$match": {
@@ -155,12 +155,13 @@ def total_distance_walked():
         {
             "$group": {
                 "_id": None,
-                "total_distance": {"$sum": "$total_distance"}
+                # Convert from feet to kilometers by multiplying with 0.0003048
+                "total_distance_km": {"$sum": {"$multiply": ["$total_distance", 0.0003048]}}
             }
         }
     ]
     result = list(activity_collection.aggregate(pipeline))
-    total_distance_all_activities = result[0]["total_distance"] if result else 0
+    total_distance_all_activities = result[0]["total_distance_km"] if result else 0
 
     return total_distance_all_activities
 
@@ -168,6 +169,7 @@ def total_distance_walked():
 distance_walked = total_distance_walked()
 print("\nTask 7: Total Distance Walked in 2008 by User 112")
 print(f"Total distance walked by user 112 in 2008: {round(distance_walked, 2)} kilometers")
+
 
 
 
