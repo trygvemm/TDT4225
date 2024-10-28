@@ -176,7 +176,7 @@ def top_20_users_altitude():
     
     for row in results:
         user_id = row[0]
-        current_altitude = row[1]
+        current_altitude = row[1]   
         
         if user_id not in last_altitude:
             last_altitude[user_id] = current_altitude
