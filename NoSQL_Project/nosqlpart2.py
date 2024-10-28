@@ -28,7 +28,7 @@ def avg_activities_per_user():
     return round(activity_count / user_count, 2) if user_count > 0 else 0
 
 avg_activities = avg_activities_per_user()
-print("\nTask 2: Average Number of Activities per User")
+print("\nTask 2: Average number of activities per user")
 print(f"Average number of activities per user: {avg_activities}")
 
 # 3. Find the top 20 users with the highest number of activities
@@ -50,8 +50,8 @@ def top_20_users_highest_activities():
     return list(activity_collection.aggregate(pipeline))
 
 top_20_users = top_20_users_highest_activities()
-print("\nTask 3: Top 20 Users with the Highest Number of Activities")
-print(tabulate([[user["_id"], user["activities"]] for user in top_20_users], headers=["User ID", "Number of Activities"], tablefmt="grid"))
+print("\nTask 3: Top 20 users with the highest number of activities")
+print(tabulate([[user["_id"], user["activities"]] for user in top_20_users], headers=["User ID", "Number of activities"], tablefmt="grid"))
 
 # 4. Find all users who have taken a taxi
 def users_taken_taxi():
@@ -59,7 +59,7 @@ def users_taken_taxi():
     return users
 
 users_taxi = users_taken_taxi()
-print("\nTask 4: Users Who Have Taken a Taxi")
+print("\nTask 4: Users who have taken a taxi")
 print(tabulate([[user] for user in users_taxi], headers=["User ID"], tablefmt="grid"))
 
 # 5. Find all types of transportation modes and count how many activities are tagged with these transportation mode labels
@@ -83,8 +83,8 @@ def activity_count():
     return list(activity_collection.aggregate(pipeline))
 
 activities = activity_count()
-print("\nTask 5: Transportation Modes and Their Activity Counts")
-print(tabulate([[activity["_id"], activity["mode_count"]] for activity in activities], headers=["Transportation Mode", "Number of Activities"], tablefmt="grid"))
+print("\nTask 5: Transportation modes and their activity counts")
+print(tabulate([[activity["_id"], activity["mode_count"]] for activity in activities], headers=["Transportation mode", "Number of activities"], tablefmt="grid"))
 
 # 6. Find the year with the most activities recorded
 def year_most_activities():
@@ -166,37 +166,32 @@ def total_distance_walked():
 
 # Call the function to get the distance walked
 distance_walked = total_distance_walked()
-print("\nTask 7: Total Distance Walked in 2008 by User 112")
+print("\nTask 7: Total distance walked in 2008 by user 112")
 print(f"Total distance walked by user 112 in 2008: {round(distance_walked, 2)} kilometers")
 
 # 8. Find the top 20 users who have gained the most altitude meters
 def top_20_users_altitude():
     pipeline = [
-        # Match only documents where altitude_gained exists and is greater than 0
         {
             "$match": {
                 "altitude_gain": {"$exists": True, "$gt": 0}
             }
         },
-        # Convert altitude from feet to meters
         {
             "$project": {
                 "user_id": 1,
-                "altitude_gain_meters": {"$multiply": ["$altitude_gain", 0.3048]}
+                "altitude_gain_meters": {"$multiply": ["$altitude_gain", 0.3048]} #convert to meters
             }
         },
-        # Group by user_id and calculate total altitude gain in meters
         {
             "$group": {
                 "_id": "$user_id",
                 "total_gain": {"$sum": "$altitude_gain_meters"}
             }
         },
-        # Sort by total_gain in descending order
         {
             "$sort": {"total_gain": -1}
         },
-        # Limit to the top 20 users
         {
             "$limit": 20
         }
@@ -204,8 +199,8 @@ def top_20_users_altitude():
     return list(activity_collection.aggregate(pipeline))
 
 top_users = top_20_users_altitude()
-print("\nTask 8: Top 20 Users by Altitude Gained (in meters)")
-print(tabulate([[user["_id"], f"{user['total_gain']:.2f}"] for user in top_users], headers=["User ID", "Total Meters Gained"], tablefmt="grid"))
+print("\nTask 8: Top 20 users by altitude gained (in meters)")
+print(tabulate([[user["_id"], f"{user['total_gain']:.2f}"] for user in top_users], headers=["User ID", "Total meters gained"], tablefmt="grid"))
 
 # 9. Find all users who have invalid activities
 def find_invalid_activities():
@@ -228,8 +223,8 @@ def find_invalid_activities():
     return list(activity_collection.aggregate(pipeline))
 
 invalid_users = find_invalid_activities()
-print("\nTask 9: Users with Invalid Activities")
-print(tabulate([[user["_id"], user["invalid_activity_count"]] for user in invalid_users], headers=["User ID", "Invalid Activities"], tablefmt="grid"))
+print("\nTask 9: Users with invalid activities")
+print(tabulate([[user["_id"], user["invalid_activity_count"]] for user in invalid_users], headers=["User ID", "Invalid activities"], tablefmt="grid"))
 
 # 10. Find the users who have tracked an activity in the Forbidden City of Beijing
 def users_forbidden_city():
@@ -246,7 +241,7 @@ def users_forbidden_city():
     matching_activities = activity_collection.find({"_id": {"$in": list(activity_ids)}})
     user_ids = {activity["user_id"] for activity in matching_activities}
 
-    print("\nTask 10: Users Who Visited the Forbidden City of Beijing")
+    print("\nTask 10: Users who visited the forbidden city of Beijing")
     print(tabulate([[user_id] for user_id in user_ids], headers=["User ID"], tablefmt="grid"))
 
 users_forbidden_city()
@@ -281,6 +276,6 @@ def users_most_used_transportation_mode():
             unique_users.append(user)
             seen_users.add(user[0])
 
-    print("\nTask 11: Users and Their Most Used Transportation Mode")
-    print(tabulate(unique_users, headers=["User ID", "Most Used Transportation Mode"], tablefmt="grid"))
+    print("\nTask 11: Users and their most used transportation mode")
+    print(tabulate(unique_users, headers=["User ID", "Most used transportation mode"], tablefmt="grid"))
 users_most_used_transportation_mode()
