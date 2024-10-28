@@ -138,50 +138,30 @@ print(f"a) {list(year_activities)[0]['_id']} had the most recorded activities wi
 print(f"b) {list(year_hours)[0]['_id']} had the most recorded hours with {list(year_hours)[0]['hours']} hours.")
 
 # 7. Find the total distance (in km) walked in 2008 by user with id=112
-from pymongo import MongoClient
-import math
-from haversine import haversine, Unit
 def total_distance_walked():
     # Define the date range for the year 2008
     start_date = datetime(2008, 1, 1)
     end_date = datetime(2009, 1, 1)
 
-    # Step 1: Find relevant activities for user_id 112
-    activities = list(activity_collection.find({
-        "user_id": "112",  # Filter by user ID
-        "transportation_mode": "walk",  # Filter by transportation mode
-        "start_date_time": {"$gte": start_date, "$lt": end_date}  # Filter by date range
-    }))
+    # Sum up total distances for walking activities in 2008 for user 112
+    pipeline = [
+        {
+            "$match": {
+                "user_id": "112",
+                "transportation_mode": "walk",
+                "start_date_time": {"$gte": start_date, "$lt": end_date}
+            }
+        },
+        {
+            "$group": {
+                "_id": None,
+                "total_distance": {"$sum": "$total_distance"}
+            }
+        }
+    ]
+    result = list(activity_collection.aggregate(pipeline))
+    total_distance_all_activities = result[0]["total_distance"] if result else 0
 
-    if not activities:
-        print("No activities found for user 112 in 2008 with walking mode.")
-        return 0
-
-    # Step 2: Initialize total distance variable
-    total_distance_all_activities = 0.0
-
-    # Iterate over each activity to calculate the distance
-    for activity in activities:
-        activity_id = activity["_id"]
-
-        # Step 3: Find the trackpoints corresponding to the current activity
-        trackpoints = list(trackpoint_collection.find({
-            "activity_id": activity_id  # Use the current activity_id to filter trackpoints
-        }).sort("date_time", 1))  # Sort trackpoints by date_time
-
-        # Step 4: Check if there are enough trackpoints to calculate distance
-        if len(trackpoints) < 2:
-            continue  # Not enough trackpoints to calculate distance
-
-        # Step 5: Calculate the total distance for the current activity
-        for i in range(1, len(trackpoints)):
-            lat1, lon1 = trackpoints[i - 1]["lat"], trackpoints[i - 1]["lon"]
-            lat2, lon2 = trackpoints[i]["lat"], trackpoints[i]["lon"]
-
-            distance = haversine((lat1, lon1), (lat2, lon2), unit=Unit.KILOMETERS)
-            total_distance_all_activities += distance
-
-    print(f"Total Distance Walked in 2008 by User 112: {round(total_distance_all_activities, 2)} km")  # Final output
     return total_distance_all_activities
 
 # Call the function to get the distance walked
@@ -194,20 +174,36 @@ print(f"Total distance walked by user 112 in 2008: {round(distance_walked, 2)} k
 # 8. Find the top 20 users who have gained the most altitude meters
 def top_20_users_altitude():
     pipeline = [
+        # Match only documents where altitude_gained exists and is greater than 0
+        {
+            "$match": {
+                "altitude_gain": {"$exists": True, "$gt": 0}
+            }
+        },
+        # Convert altitude from feet to meters
+        {
+            "$project": {
+                "user_id": 1,
+                "altitude_gain_meters": {"$multiply": ["$altitude_gain", 0.3048]}
+            }
+        },
+        # Group by user_id and calculate total altitude gain in meters
         {
             "$group": {
                 "_id": "$user_id",
-                "total_gain": {"$sum": {"$subtract": ["$altitude", {"$ifNull": ["$prev_altitude", 0]}]}}
+                "total_gain": {"$sum": "$altitude_gain_meters"}
             }
         },
+        # Sort by total_gain in descending order
         {
             "$sort": {"total_gain": -1}
         },
+        # Limit to the top 20 users
         {
             "$limit": 20
         }
     ]
-    return list(trackpoint_collection.aggregate(pipeline))
+    return list(activity_collection.aggregate(pipeline))
 
 top_users = top_20_users_altitude()
 print("\nTask 8: Top 20 Users by Altitude Gained (in meters)")
@@ -217,24 +213,21 @@ print(tabulate([[user["_id"], f"{user['total_gain']:.2f}"] for user in top_users
 def find_invalid_activities():
     pipeline = [
         {
+            "$match": {
+                "is_valid": False
+            }
+        },
+        {
             "$group": {
                 "_id": "$user_id",
-                "invalid_activity_count": {
-                    "$sum": {
-                        "$cond": [
-                            {"$gt": [{"$subtract": ["$curr_time", "$prev_time"]}, 300]},  # 5 minutes in seconds
-                            1,
-                            0
-                        ]
-                    }
-                }
+                "invalid_activity_count": {"$sum": 1}
             }
         },
         {
             "$sort": {"invalid_activity_count": -1}
         }
     ]
-    return list(trackpoint_collection.aggregate(pipeline))
+    return list(activity_collection.aggregate(pipeline))
 
 invalid_users = find_invalid_activities()
 print("\nTask 9: Users with Invalid Activities")
