@@ -4,8 +4,8 @@ from DbConnector import DbConnector
 from datetime import datetime
 
 # Establishing the connection to MongoDB using DbConnector
-connection = DbConnector()  # Create an instance of DbConnector
-db_connection = connection.db  # Access the database connection from the DbConnector instance
+connection = DbConnector() 
+db_connection = connection.db
 activity_collection = db_connection['Activity']
 user_collection = db_connection['User']
 trackpoint_collection = db_connection['TrackPoint']
@@ -138,11 +138,9 @@ print(f"b) {list(year_hours)[0]['_id']} had the most recorded hours with {list(y
 
 # 7. Find the total distance (in km) walked in 2008 by user with id=112
 def total_distance_walked():
-    # Define the date range for the year 2008
     start_date = datetime(2008, 1, 1)
     end_date = datetime(2009, 1, 1)
 
-    # Sum up total distances for walking activities in 2008 for user 112 and convert feet to kilometers
     pipeline = [
         {
             "$match": {
@@ -164,7 +162,6 @@ def total_distance_walked():
 
     return total_distance_all_activities
 
-# Call the function to get the distance walked
 distance_walked = total_distance_walked()
 print("\nTask 7: Total distance walked in 2008 by user 112")
 print(f"Total distance walked by user 112 in 2008: {round(distance_walked, 2)} kilometers")
@@ -228,22 +225,42 @@ print(tabulate([[user["_id"], user["invalid_activity_count"]] for user in invali
 
 # 10. Find the users who have tracked an activity in the Forbidden City of Beijing
 def users_forbidden_city():
-    # Query the TrackPoint collection to find matching trackpoints (starting with the same 3 decimals)
-    matching_trackpoints = trackpoint_collection.find({
-        "lat": {"$gte": 39.916, "$lt": 39.917},
-        "lon": {"$gte": 116.397, "$lt": 116.398}
-    })
+    pipeline = [
+        {
+            "$match": {
+                "lat": {"$gte": 39.916, "$lt": 39.917},
+                "lon": {"$gte": 116.397, "$lt": 116.398}
+            }
+        },
+        {
+            "$group": {
+                "_id": "$activity_id"
+            }
+        },
+        {
+            "$lookup": {
+                "from": "Activity",  
+                "localField": "_id",  
+                "foreignField": "_id",  
+                "as": "activity_details" 
+            }
+        },
+        {
+            "$unwind": "$activity_details"
+        },
+        {
+            "$group": {
+                "_id": "$activity_details.user_id"
+            }
+        }
+    ]
 
-    # Extract the activity_ids from the matching trackpoints
-    activity_ids = {trackpoint["activity_id"] for trackpoint in matching_trackpoints}
+    results = list(trackpoint_collection.aggregate(pipeline))
 
-    # Query the Activity collection to find users who have these activity_ids
-    matching_activities = activity_collection.find({"_id": {"$in": list(activity_ids)}})
-    user_ids = {activity["user_id"] for activity in matching_activities}
+    user_ids = {result["_id"] for result in results}
 
-    print("\nTask 10: Users who visited the forbidden city of Beijing")
+    print("\nTask 10: Users Who Visited the Forbidden City of Beijing")
     print(tabulate([[user_id] for user_id in user_ids], headers=["User ID"], tablefmt="grid"))
-
 users_forbidden_city()
 
 
