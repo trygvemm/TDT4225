@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 from tabulate import tabulate
 from DbConnector import DbConnector
+from datetime import datetime
 
 # Establishing the connection to MongoDB using DbConnector
 connection = DbConnector()  # Create an instance of DbConnector
@@ -137,64 +138,58 @@ print(f"a) {list(year_activities)[0]['_id']} had the most recorded activities wi
 print(f"b) {list(year_hours)[0]['_id']} had the most recorded hours with {list(year_hours)[0]['hours']} hours.")
 
 # 7. Find the total distance (in km) walked in 2008 by user with id=112
+from pymongo import MongoClient
+import math
+from haversine import haversine, Unit
 def total_distance_walked():
-    pipeline = [
-        {
-            "$match": {
-                "user_id": 112,
-                "transportation_mode": "walk",
-                "date_time": {"$gte": "2008-01-01", "$lt": "2009-01-01"}
-            }
-        },
-        {
-            "$project": {
-                "lat": "$lat",
-                "lon": "$lon",
-                "next_lat": {"$arrayElemAt": ["$lat", 1]},
-                "next_lon": {"$arrayElemAt": ["$lon", 1]}
-            }
-        },
-        {
-            "$project": {
-                "distance": {
-                    "$multiply": [
-                        6371,  # Earth radius in km
-                        {
-                            "$acos": {
-                                "$add": [
-                                    {
-                                        "$multiply": [
-                                            {"$sin": {"$radians": "$lat"}},
-                                            {"$sin": {"$radians": "$next_lat"}}
-                                        ]
-                                    },
-                                    {
-                                        "$multiply": [
-                                            {"$cos": {"$radians": "$lat"}},
-                                            {"$cos": {"$radians": "$next_lat"}},
-                                            {"$cos": {"$subtract": [{"$radians": "$lon"}, {"$radians": "$next_lon"}]}}
-                                        ]
-                                    }
-                                ]
-                            }
-                        }
-                    ]
-                }
-            }
-        },
-        {
-            "$group": {
-                "_id": None,
-                "total_distance_km": {"$sum": "$distance"}
-            }
-        }
-    ]
-    result = list(trackpoint_collection.aggregate(pipeline))
-    return result[0]["total_distance_km"] if result else 0
+    # Define the date range for the year 2008
+    start_date = datetime(2008, 1, 1)
+    end_date = datetime(2009, 1, 1)
 
+    # Step 1: Find relevant activities for user_id 112
+    activities = list(activity_collection.find({
+        "user_id": "112",  # Filter by user ID
+        "transportation_mode": "walk",  # Filter by transportation mode
+        "start_date_time": {"$gte": start_date, "$lt": end_date}  # Filter by date range
+    }))
+
+    if not activities:
+        print("No activities found for user 112 in 2008 with walking mode.")
+        return 0
+
+    # Step 2: Initialize total distance variable
+    total_distance_all_activities = 0.0
+
+    # Iterate over each activity to calculate the distance
+    for activity in activities:
+        activity_id = activity["_id"]
+
+        # Step 3: Find the trackpoints corresponding to the current activity
+        trackpoints = list(trackpoint_collection.find({
+            "activity_id": activity_id  # Use the current activity_id to filter trackpoints
+        }).sort("date_time", 1))  # Sort trackpoints by date_time
+
+        # Step 4: Check if there are enough trackpoints to calculate distance
+        if len(trackpoints) < 2:
+            continue  # Not enough trackpoints to calculate distance
+
+        # Step 5: Calculate the total distance for the current activity
+        for i in range(1, len(trackpoints)):
+            lat1, lon1 = trackpoints[i - 1]["lat"], trackpoints[i - 1]["lon"]
+            lat2, lon2 = trackpoints[i]["lat"], trackpoints[i]["lon"]
+
+            distance = haversine((lat1, lon1), (lat2, lon2), unit=Unit.KILOMETERS)
+            total_distance_all_activities += distance
+
+    print(f"Total Distance Walked in 2008 by User 112: {round(total_distance_all_activities, 2)} km")  # Final output
+    return total_distance_all_activities
+
+# Call the function to get the distance walked
 distance_walked = total_distance_walked()
 print("\nTask 7: Total Distance Walked in 2008 by User 112")
 print(f"Total distance walked by user 112 in 2008: {round(distance_walked, 2)} kilometers")
+
+
 
 # 8. Find the top 20 users who have gained the most altitude meters
 def top_20_users_altitude():
